@@ -1,0 +1,30 @@
+{
+  "name": "dgx-wrapper-contract",
+  "version": "1.0.0",
+  "description": "Wrapper contract for Digix Gold Token (DGX)",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DigixGlobal/dgx-wrapper-contract.git"
+  },
+  "dependencies": {
+    "openzeppelin-solidity": "1.8.0",
+    "@digix/solidity-core-libraries": "^0.2.3",
+    "@digix/helpers": "^1.0.0",
+    "awaiting": "^3.0.0",
+    "ethereumjs-testrpc": "^3.9.2",
+    "solc": "^0.4.16"
+  },
+  "author": "DigixGlobal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DigixGlobal/dgx-wrapper-contract/issues"
+  },
+  "homepage": "https://github.com/DigixGlobal/dgx-wrapper-contract#readme"
+}
