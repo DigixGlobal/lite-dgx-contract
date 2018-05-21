@@ -7,7 +7,7 @@ contract DGXStorage {
   function read_user_fees_configs(address _account)
     public
     pure
-    returns (bool, bool, bool);
+    returns (bool, bool);
 
   function read_transfer_config()
     public
@@ -53,7 +53,10 @@ contract LDGX is StandardToken {
   }
 
   // user deposits by calling transferAndCall(LDGX_contract, amount, "") on the DGX Token contract
-  function tokenFallback(address _user, uint256 _dgxIn, bytes32 _data) public {
+  function tokenFallback(address _user, uint256 _dgxIn, bytes32 _data)
+    public
+    returns (bool _success)
+  {
     require(msg.sender == DGX_TOKEN_ADDRESS);
     require(initialized);
     uint256 _transferRate;
@@ -63,7 +66,7 @@ contract LDGX is StandardToken {
     bool _userNoFees;
 
     (,_transferBase, _transferRate,,_globalNoFees,) = DGXStorage(DGX_TOKEN_STORAGE).read_transfer_config();
-    (,_userNoFees,) = DGXStorage(DGX_TOKEN_STORAGE).read_user_fees_configs(_user);
+    (,_userNoFees) = DGXStorage(DGX_TOKEN_STORAGE).read_user_fees_configs(_user);
 
     _realDgxIn = _dgxIn;
     if (!_globalNoFees && !_userNoFees) {
@@ -76,6 +79,8 @@ contract LDGX is StandardToken {
     balances[_user] = balances[_user].add(_ldgxOut);
     totalSupply_ = totalSupply_.add(_ldgxOut);
     emit Transfer(address(0x0), _user, _ldgxOut);
+
+    _success = true;
   }
 
   // withdraw in terms of dgx

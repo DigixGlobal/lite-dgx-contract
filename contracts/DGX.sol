@@ -5,15 +5,22 @@ import "./DGXStorage.sol";
 contract DGX {
 
   address DGX_STORAGE_ADDRESS;
+  address FEES_ADMIN;
 
   string public constant name = "Digix Gold Token";
   string public constant symbol = "DGX";
   uint8 public constant decimals = 9;
 
-  constructor(address _dgxStorage)
+  constructor(address _dgxStorage, address _feesAdmin)
     public
   {
     DGX_STORAGE_ADDRESS = _dgxStorage;
+    FEES_ADMIN = _feesAdmin;
+  }
+
+  modifier if_fees_admin() {
+    require(msg.sender == FEES_ADMIN);
+    _;
   }
 
   function totalSupply()
@@ -78,6 +85,22 @@ contract DGX {
     _allowance = DGXStorage(DGX_STORAGE_ADDRESS).read_allowance(_owner, _spender);
   }
 
+  function updateUserFeesConfigs(
+    address _user,
+    bool _no_demurrage_fee,
+    bool _no_transfer_fee
+  )
+    public
+    if_fees_admin()
+    returns (bool _success)
+  {
+    _success = DGXStorage(DGX_STORAGE_ADDRESS).update_user_fees_configs(
+      _user,
+      _no_demurrage_fee,
+      _no_transfer_fee
+    );
+  }
+
   ////////////////////////////// MOCK FUNCTIONS ///////////////////////////////
 
   // This function is not present in the DGX2.0 token contracts.
@@ -87,5 +110,14 @@ contract DGX {
     returns (bool _success)
   {
     _success = DGXStorage(DGX_STORAGE_ADDRESS).mint_dgx_for(_for, _amount);
+  }
+
+  // This function is not present in the DGX2.0 token contracts.
+  // For test purpose, only used to simulate demurrage deduction
+  function modifyLastPaymentDate(address _of, uint256 _byMinutes)
+    public
+    returns (bool _success)
+  {
+    _success = DGXStorage(DGX_STORAGE_ADDRESS).modify_last_payment_date(_of, _byMinutes);
   }
 }

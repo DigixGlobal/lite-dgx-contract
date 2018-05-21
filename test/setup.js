@@ -13,16 +13,11 @@ const deployLibraries = async function () {
 };
 
 const deployTestData = async function (libs, addressOf, contracts) {
-  // console.log('linking');
   await DGXStorage.link('Types', libs.types.address);
   await DGXStorage.link('MathUtils', libs.mathUtils.address);
-  // console.log('deploying dgx storage');
   contracts.dgxStorage = await DGXStorage.new();
-  // console.log('deploying dgx interactive');
-  contracts.dgx = await DGX.new(contracts.dgxStorage.address);
-  // console.log('setting interactive address in storage');
+  contracts.dgx = await DGX.new(contracts.dgxStorage.address, addressOf.feesadmin);
   await contracts.dgxStorage.setInteractive(contracts.dgx.address);
-  // console.log('deploying wrapperDgx');
   contracts.liteDgx = await LDGX.new(
     contracts.dgx.address,
     contracts.dgxStorage.address

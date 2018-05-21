@@ -183,6 +183,18 @@ contract DGXStorage {
     _allowance = system.users[_owner].data.spender_allowances[_spender];
   }
 
+  function read_user_fees_configs(address _account)
+    public
+    constant
+    returns (
+      bool _no_demurrage_fee,
+      bool _no_transfer_fee
+    )
+  {
+    _no_demurrage_fee = system.users[_account].config.no_demurrage_fee;
+    _no_transfer_fee = system.users[_account].config.no_transfer_fee;
+  }
+
   ////////////////////////// CALLABLE FROM INTERACTIVE ////////////////////////
 
   function show_demurraged_balance(address _user)
@@ -286,6 +298,20 @@ contract DGXStorage {
     }
   }
 
+  function update_user_fees_configs(
+    address _user,
+    bool _no_demurrage_fee,
+    bool _no_transfer_fee
+  )
+    public
+    if_dgx_interactive()
+    returns (bool _success)
+  {
+    system.users[_user].config.no_demurrage_fee = _no_demurrage_fee;
+    system.users[_user].config.no_transfer_fee = _no_transfer_fee;
+    _success = true;
+  }
+
   // This function is not present in the DGX2.0 token contracts.
   // For test purpose, only used to bypass the POP process
   function mint_dgx_for(
@@ -298,6 +324,20 @@ contract DGXStorage {
   {
     system.users[_for].data.raw_balance += _amount;
     system.total_supply += _amount;
+    _success = true;
+  }
+
+  // This function is not present in the DGX2.0 token contracts.
+  // For test purpose, only used to simulate demurrage deduction
+  function modify_last_payment_date(
+    address _of,
+    uint256 _byMinutes
+  )
+    public
+    if_dgx_interactive()
+    returns (bool _success)
+  {
+    system.users[_of].data.last_payment_date = now - (_byMinutes * 1 minutes);
     _success = true;
   }
 
