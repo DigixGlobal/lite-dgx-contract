@@ -1,16 +1,19 @@
-# DGX Wrapper
+# LiteDGX
 
 Wrapper contract for Digix Gold Token (DGX)
 
-### Functionality
+### Overview
 * No transfer fees
-* Standard behaviour as ERC-20 token
-* Demurrage to be deducted on the backing DGX tokens
+* No demurrage fees
+* ERC-20 and ERC-677 compliant
+* Rate of DGX/LiteDGX will decay over time due to the demurrage fees on the underlying DGXs in the contract. This rate can be read from calling `getDgxLdgxRate` and divide the result by 10^9
+
 
 ### Test
 * Install the dependencies
   ```
   npm install
+  npm i -g truffle
   ```
 * Compile the contracts
   ```
@@ -18,5 +21,5 @@ Wrapper contract for Digix Gold Token (DGX)
   ```
 * Run tests
   ```
-  truffle test test/WDGX.js
+  npm test
   ```

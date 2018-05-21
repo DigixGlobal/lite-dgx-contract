@@ -85,7 +85,7 @@ contract LDGX is StandardToken {
 
   // withdraw in terms of dgx
   function withdraw(uint _dgxOut) public {
-    uint256 _ldgxToBurn = SafeMath.mul(_dgxOut, totalSupply_).div(ERC20(DGX_TOKEN_ADDRESS).balanceOf(address(this)));
+    uint256 _ldgxToBurn = _dgxOut.mul(totalSupply_).div(ERC20(DGX_TOKEN_ADDRESS).balanceOf(address(this)));
     require(balances[msg.sender] >= _ldgxToBurn);
     balances[msg.sender] -= _ldgxToBurn;
     totalSupply_ -= _ldgxToBurn;

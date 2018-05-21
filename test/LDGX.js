@@ -35,6 +35,12 @@ contract('Lite DGX', function (accounts) {
     await mintSomeTokens(contracts, addressOf, bN);
   });
 
+  const reportLdgxDetails = async () => {
+      console.log('\t\tdgx:ldgx = ', (await contracts.liteDgx.getDgxLdgxRate.call()).toNumber() / 1.0e9);
+      console.log('\t\tbalance of dgx in contract: ', (await contracts.dgx.balanceOf.call(contracts.liteDgx.address)).toNumber());
+      console.log('\t\tldgx total supply :         ', (await contracts.liteDgx.totalSupply.call()).toNumber());
+  }
+
   // force demurrage for nDays number of days
   // basically to skew the dgx:ldgx ratio
   const daysCorrection = async function (nDays, user) {
@@ -89,9 +95,7 @@ contract('Lite DGX', function (accounts) {
     it('Valid first deposit: successful', async function () {
       await contracts.dgx.approve(contracts.liteDgx.address, initialDeposit, { from: addressOf.testUser1 });
       await contracts.liteDgx.firstDeposit(initialDeposit, { from: addressOf.testUser1 });
-      console.log('dgx:ldgx = ', await contracts.liteDgx.getDgxLdgxRate.call());
-      console.log('balance of dgx in contract: ', await contracts.dgx.balanceOf.call(contracts.liteDgx.address));
-      console.log('ldgx supply : ', await contracts.liteDgx.totalSupply.call());
+      await reportLdgxDetails();
     });
     it('[re-initialize]: revert', async function () {
       await contracts.dgx.approve(contracts.liteDgx.address, initialDeposit, { from: addressOf.testUser1 });
@@ -103,14 +107,12 @@ contract('Lite DGX', function (accounts) {
   });
 
   describe('deposit DGX', function () {
-    it('Valid deposit: successful', async function () {
+    it('Valid deposit: goes through', async function () {
       const deposit = bN(2e9); // 2DGX
       await contracts.dgx.transferAndCall(contracts.liteDgx.address, deposit, '', { from: addressOf.testUser1 });
 
-      console.log('dgx:ldgx = ', await contracts.liteDgx.getDgxLdgxRate.call());
-      console.log('balance of dgx in contract: ', await contracts.dgx.balanceOf.call(contracts.liteDgx.address));
-      console.log('ldgx supply : ', await contracts.liteDgx.totalSupply.call());
-      console.log('balance of ldgx of user: ', await contracts.liteDgx.balanceOf.call(addressOf.testUser1));
+      await reportLdgxDetails();
+      console.log('\tbalance of ldgx of user: ', await contracts.liteDgx.balanceOf.call(addressOf.testUser1));
     });
     it('[not initialized]: revert', async function () {
       const dummyLdgx = await LDGX.new(contracts.dgx.address, contracts.dgxStorage.address);
@@ -123,74 +125,74 @@ contract('Lite DGX', function (accounts) {
         { from: addressOf.testUser1 },
       )));
     });
-    it('[when dgx:ldgx is not 1 (due to demurrage fee for ldgx contract)]', async function () {
-      // before the transaction, both are the same
+    it('[after some time, dgx:ldgx is not 1] correct amount of LDGX is minted, correct amount of DGX is received', async function () {
+      // We just created the wrapper today, so amount of LDGX is exactly the same as amount of DGX in the wrapper
       const wrapperDgxBalanceBefore = await contracts.dgx.balanceOf.call(contracts.liteDgx.address);
-      const wrapperDgxSupplyBefore = await contracts.liteDgx.totalSupply.call();
-      assert.deepEqual(wrapperDgxBalanceBefore, wrapperDgxSupplyBefore);
+      const ldgxTotalSupplyBefore = await contracts.liteDgx.totalSupply.call();
+      assert.deepEqual(wrapperDgxBalanceBefore, ldgxTotalSupplyBefore);
 
-      // set last payment date 5 days ago, and find the expected demurraged balance
+      // "time-warp" to 5 days, and find the expected demurraged balance
       // this will be the balance when the tokenFallback is eventually called
       await daysCorrection(5, contracts.liteDgx.address);
       const expectedDemurrageFor5Days = calculateFees(wrapperDgxBalanceBefore.times(bN(5)), 'demurrage'); // 5 days correction
       const expectedDemurragedBalance = wrapperDgxBalanceBefore.minus(expectedDemurrageFor5Days);
 
-      // make dummy deposit
-      const transferAmount = bN(1e9);
+      // make the deposit
+      const depositAmount = bN(1e9);
       await contracts.dgx.transferAndCall(
         contracts.liteDgx.address,
-        transferAmount,
+        depositAmount,
         '',
         { from: addressOf.testUser1 },
       );
-      const expectedTransferFees = calculateFees(bN(1e9), 'transfer');
+      const expectedTransferFees = calculateFees(depositAmount, 'transfer');
 
       // do the expected calculation in js, find expected balance and supply
-      const wrapperDgxSupplyAdded = (transferAmount.minus(expectedTransferFees)).times(wrapperDgxSupplyBefore).dividedToIntegerBy(expectedDemurragedBalance);
-      const wrapperDgxSupplyAfterShouldBe = wrapperDgxSupplyBefore.plus(wrapperDgxSupplyAdded);
+      const ldgxTotalSupplyAdded = (depositAmount.minus(expectedTransferFees)).times(ldgxTotalSupplyBefore).dividedToIntegerBy(expectedDemurragedBalance);
+      const ldgxTotalSupplyAfterShouldBe = ldgxTotalSupplyBefore.plus(ldgxTotalSupplyAdded);
 
       // after calculation contract side, these are the balance and supply
       const wrapperDgxBalanceNow = await contracts.dgx.balanceOf.call(contracts.liteDgx.address);
-      const wrapperDgxSupplyNow = await contracts.liteDgx.totalSupply.call();
+      const ldgxTotalSupplyNow = await contracts.liteDgx.totalSupply.call();
 
-      assert.deepEqual(wrapperDgxBalanceNow, expectedDemurragedBalance.plus(transferAmount).minus(expectedTransferFees));
-      assert.deepEqual(wrapperDgxSupplyNow, wrapperDgxSupplyAfterShouldBe);
+      assert.deepEqual(wrapperDgxBalanceNow, expectedDemurragedBalance.plus(depositAmount).minus(expectedTransferFees));
+      assert.deepEqual(ldgxTotalSupplyNow, ldgxTotalSupplyAfterShouldBe);
     });
-    it('[when transfer fees is zero for user]: verify', async function () {
-      // exempt testRichKycUser from transfer fees
+    it('[when transfer fees is zero for user] correct amount of LDGX is minted, correct amount of DGX is received', async function () {
+      // exempt testUser1 from transfer fees
       await contracts.dgx.updateUserFeesConfigs(addressOf.testUser1, false, true, { from: addressOf.feesadmin });
 
       // before the transaction
       const wrapperDgxBalanceBefore = await contracts.dgx.balanceOf.call(contracts.liteDgx.address);
-      const wrapperDgxSupplyBefore = await contracts.liteDgx.totalSupply.call();
+      const ldgxTotalSupplyBefore = await contracts.liteDgx.totalSupply.call();
 
-      // set last payment date 5 days ago, and find the expected demurraged balance
+      // "time-warp" for 3 days, and find the expected demurraged balance
       // this will be the balance when the tokenFallback is eventually called
       await daysCorrection(3, contracts.liteDgx.address);
       const expectedDemurrageFor3Days = calculateFees(wrapperDgxBalanceBefore.times(bN(3)), 'demurrage'); // 3 days correction
       const expectedDemurragedBalance = wrapperDgxBalanceBefore.minus(expectedDemurrageFor3Days);
 
-      // make dummy deposit
-      const transferAmount = bN(1e9);
+      // make the deposit
+      const depositAmount = bN(1e9);
       await contracts.dgx.transferAndCall(
         contracts.liteDgx.address,
-        transferAmount,
+        depositAmount,
         '',
         { from: addressOf.testUser1 },
       );
       const expectedTransferFees = bN(0); // since we have exempted user from transfer fees
 
       // do the expected calculation in js, find expected balance and supply
-      const wrapperDgxSupplyAdded = (transferAmount.minus(expectedTransferFees)).times(wrapperDgxSupplyBefore).dividedToIntegerBy(expectedDemurragedBalance);
-      const wrapperDgxSupplyAfterShouldBe = wrapperDgxSupplyBefore.plus(wrapperDgxSupplyAdded);
+      const ldgxTotalSupplyAdded = (depositAmount.minus(expectedTransferFees)).times(ldgxTotalSupplyBefore).dividedToIntegerBy(expectedDemurragedBalance);
+      const ldgxTotalSupplyAfterShouldBe = ldgxTotalSupplyBefore.plus(ldgxTotalSupplyAdded);
 
       // after calculation contract side, these are the balance and supply
       const wrapperDgxBalanceNow = await contracts.dgx.balanceOf.call(contracts.liteDgx.address);
-      const wrapperDgxSupplyNow = await contracts.liteDgx.totalSupply.call();
+      const ldgxTotalSupplyNow = await contracts.liteDgx.totalSupply.call();
 
       // assertions
-      assert.deepEqual(wrapperDgxBalanceNow, expectedDemurragedBalance.plus(transferAmount).minus(expectedTransferFees));
-      assert.deepEqual(wrapperDgxSupplyNow, wrapperDgxSupplyAfterShouldBe);
+      assert.deepEqual(wrapperDgxBalanceNow, expectedDemurragedBalance.plus(depositAmount).minus(expectedTransferFees));
+      assert.deepEqual(ldgxTotalSupplyNow, ldgxTotalSupplyAfterShouldBe);
     });
   });
 
@@ -201,12 +203,12 @@ contract('Lite DGX', function (accounts) {
         { from: addressOf.testUser1 },
       )));
     });
-    it('Valid withdrawal with transfer fees and demurrage: successful', async function () {
+    it('[Valid withdrawal] correct amount of LDGX burned, correct amount of DGX withdrawn', async function () {
       // initial balances
       const userDgxBalanceBefore = await contracts.dgx.balanceOf.call(addressOf.testUser1);
       const userLdgxBalanceBefore = await contracts.liteDgx.balanceOf.call(addressOf.testUser1);
       const wrapperDgxBalanceBefore = await contracts.dgx.balanceOf.call(contracts.liteDgx.address);
-      const wrapperDgxSupplyBefore = await contracts.liteDgx.totalSupply.call();
+      const ldgxTotalSupplyBefore = await contracts.liteDgx.totalSupply.call();
 
       // set last payment date to be 1 day earlier
       // demurrage will be cut on both sides then
@@ -223,11 +225,11 @@ contract('Lite DGX', function (accounts) {
       await contracts.liteDgx.withdraw(withdrawAmount, { from: addressOf.testUser1 });
 
       // expected calculation values
-      const ldgxToBurn = withdrawAmount.times(wrapperDgxSupplyBefore).dividedToIntegerBy(demurragedWrapperBalance);
+      const ldgxToBurn = withdrawAmount.times(ldgxTotalSupplyBefore).dividedToIntegerBy(demurragedWrapperBalance);
       const userLdgxBalanceAfter = userLdgxBalanceBefore.minus(ldgxToBurn);
       const wrapperDgxBalanceAfter = demurragedWrapperBalance.minus(withdrawAmount);
       const userDgxBalanceAfter = demurragedUserBalance.plus(withdrawAmount).minus(expectedTransferFees);
-      const wrapperDgxSupplyAfter = wrapperDgxSupplyBefore.minus(ldgxToBurn);
+      const wrapperDgxSupplyAfter = ldgxTotalSupplyBefore.minus(ldgxToBurn);
 
       // assertions
       assert.deepEqual(await contracts.dgx.balanceOf.call(addressOf.testUser1), userDgxBalanceAfter);
@@ -248,126 +250,51 @@ contract('Lite DGX', function (accounts) {
     });
   });
 
-  describe('scenario testing', function () {
+  describe('Scenarios testing', function () {
     let wrapperDgxContract;
-    before(async function () {
+    beforeEach(async function () {
       wrapperDgxContract = await LDGX.new(contracts.dgx.address, contracts.dgxStorage.address);
-      const firstDepositAmount = bN(5e9);
-      await contracts.dgx.approve(wrapperDgxContract.address, firstDepositAmount, { from: addressOf.testUser1 });
-      await wrapperDgxContract.firstDeposit(firstDepositAmount, { from: addressOf.testUser1 });
+      const firstDepositAmount = bN(1e7);
+      await contracts.dgx.approve(wrapperDgxContract.address, firstDepositAmount, { from: addressOf.testUser3 });
+      await wrapperDgxContract.firstDeposit(firstDepositAmount, { from: addressOf.testUser3 });
       await contracts.dgx.updateUserFeesConfigs(addressOf.testUser1, false, false, { from: addressOf.feesadmin });
     });
-    it('[checking rounding errors over 1 month]', async function () {
-      const minTransferAmount = bN(initialMinimumPurchase);
-      const minTransferFees = calculateFees(minTransferAmount, 'transfer');
-      let totalLdgxOutShouldBe = (await wrapperDgxContract.totalSupply.call()).toNumber();
+    it('[checking rounding errors for 100DGX daily deposits in 1 month]', async function () {
+      const dailyDepositAmount = bN(100e9);
+      const dailyTransferFees = calculateFees(dailyDepositAmount, 'transfer');
+      let totalLdgxMintedExpected = (await wrapperDgxContract.totalSupply.call()).toNumber();
       let demurragedBalance = 0;
+
       for (const d of indexRange(0, 30)) {
         await daysCorrection(1, wrapperDgxContract.address);
         demurragedBalance = await contracts.dgx.balanceOf.call(wrapperDgxContract.address);
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        const addition = ((minTransferAmount.toNumber() - minTransferFees.toNumber()) * totalLdgxOutShouldBe) / demurragedBalance.toNumber();
-        totalLdgxOutShouldBe += addition;
-        // console.log('done : ', d);
+        await contracts.dgx.transferAndCall(wrapperDgxContract.address, dailyDepositAmount, '', { from: addressOf.testUser1 });
+        const addition = ((dailyDepositAmount.toNumber() - dailyTransferFees.toNumber()) * totalLdgxMintedExpected) / demurragedBalance.toNumber();
+        totalLdgxMintedExpected += addition;
+        // console.log('\tdone : ', d);
       }
-      console.log('should be : ', totalLdgxOutShouldBe);
+      console.log('\tshould be : ', totalLdgxMintedExpected);
       const totalLdgxOutActual = await wrapperDgxContract.totalSupply.call();
-      console.log('is        : ', totalLdgxOutActual.toNumber());
-      console.log('error for 1 month : ', ((totalLdgxOutShouldBe - totalLdgxOutActual.toNumber()) * 100.0) / totalLdgxOutShouldBe, ' %');
+      console.log('\tis        : ', totalLdgxOutActual.toNumber());
+      console.log('\terror for 1 month : ', ((totalLdgxMintedExpected - totalLdgxOutActual.toNumber()) * 100.0) / totalLdgxMintedExpected, ' %');
     });
-    it('[checking rounding errors over 6 month]', async function () {
-      const minTransferAmount = bN(initialMinimumPurchase);
-      const minTransferFees = calculateFees(minTransferAmount, 'transfer');
-      let totalLdgxOutShouldBe = (await wrapperDgxContract.totalSupply.call()).toNumber();
+    it('[checking rounding errors for 100DGX daily deposits over 6 month]', async function () {
+      const dailyDepositAmount = bN(100e9);
+      const dailyTransferFees = calculateFees(dailyDepositAmount, 'transfer');
+      let totalLdgxMintedExpected = (await wrapperDgxContract.totalSupply.call()).toNumber();
       let demurragedBalance = 0;
       for (const d of indexRange(0, 180)) {
         await daysCorrection(1, wrapperDgxContract.address);
         demurragedBalance = await contracts.dgx.balanceOf.call(wrapperDgxContract.address);
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        const addition = ((minTransferAmount.toNumber() - minTransferFees.toNumber()) * totalLdgxOutShouldBe) / demurragedBalance.toNumber();
-        totalLdgxOutShouldBe += addition;
-        // console.log('done : ', d);
+        await contracts.dgx.transferAndCall(wrapperDgxContract.address, dailyDepositAmount, '', { from: addressOf.testUser1 });
+        const addition = ((dailyDepositAmount.toNumber() - dailyTransferFees.toNumber()) * totalLdgxMintedExpected) / demurragedBalance.toNumber();
+        totalLdgxMintedExpected += addition;
+        // console.log('\tdone : ', d);
       }
-      console.log('should be : ', totalLdgxOutShouldBe);
+      console.log('\tshould be : ', totalLdgxMintedExpected);
       const totalLdgxOutActual = await wrapperDgxContract.totalSupply.call();
-      console.log('is        : ', totalLdgxOutActual.toNumber());
-      console.log('error for 6 months : ', ((totalLdgxOutShouldBe - totalLdgxOutActual.toNumber()) * 100.0) / totalLdgxOutShouldBe, ' %');
-    });
-    it('[how does holding 1 DGX differ from holding LDGX in terms of demurrage paid (1 month | 1 tx per day)]', async function () {
-      // addressOf.testUser2 converts DGX to LDGX
-      // after d days what would have been the demurrage paid in DGX
-      // after d days what is user getting back by withdrawing from LDGX
-
-      const userDgxBalanceBefore = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-      await contracts.dgx.transferAndCall(wrapperDgxContract.address, bN(1e9), '', { from: addressOf.testUser2 });
-      const minTransferAmount = bN(initialMinimumPurchase);
-
-      // dummy transactions for a month
-      for (const d of indexRange(0, 30)) {
-        await daysCorrection(1, wrapperDgxContract.address);
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-      }
-
-      // kycUsers[0] withdraws
-      const dgxEquivalent = await wrapperDgxContract.dgxEquivalent.call({ from: addressOf.testUser2 });
-      await wrapperDgxContract.withdraw(dgxEquivalent, { from: addressOf.testUser2 });
-      const userDgxBalanceAfter = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-
-      // simply holding 1 DGX for 1 month would have cost demurrage of
-      const demurrageForOneMonth = calculateFees(bN(1e9).times(bN(30)), 'demurrage');
-      console.log('holding demurrage : ', demurrageForOneMonth.toNumber());
-      console.log('holding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
-    });
-    it('[how does holding 1 DGX differ from holding LDGX in terms of demurrage paid (1 month | 2 tx per day)]', async function () {
-      // addressOf.testUser2 converts DGX to LDGX
-      // after d days what would have been the demurrage paid in DGX
-      // after d days what is user getting back by withdrawing from LDGX
-      const userDgxBalanceBefore = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-      await contracts.dgx.transferAndCall(wrapperDgxContract.address, bN(1e9), '', { from: addressOf.testUser2 });
-      const minTransferAmount = bN(initialMinimumPurchase);
-
-      // dummy transactions for a month
-      for (const d of indexRange(0, 30)) {
-        await daysCorrection(1, wrapperDgxContract.address);
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-      }
-
-      // kycUsers[0] withdraws
-      const dgxEquivalent = await wrapperDgxContract.dgxEquivalent.call({ from: addressOf.testUser2 });
-      await wrapperDgxContract.withdraw(dgxEquivalent, { from: addressOf.testUser2 });
-      const userDgxBalanceAfter = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-
-      // simply holding 1 DGX for 1 month would have cost demurrage of
-      const demurrageForOneMonth = calculateFees(bN(1e9).times(bN(30)), 'demurrage');
-      console.log('holding demurrage : ', demurrageForOneMonth.toNumber());
-      console.log('holding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
-    });
-    it('[how does holding ~300 DGX differ from holding LDGX in terms of demurrage paid (1 month | 1 tx per day)]', async function () {
-      // addressOf.testUser2 converts DGX to LDGX
-      // after d days what would have been the demurrage paid in DGX
-      // after d days what is user getting back by withdrawing from LDGX
-      const userDgxBalanceBefore = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-      // console.log('balance is : ', userDgxBalanceBefore.toNumber());
-      await contracts.dgx.transferAndCall(wrapperDgxContract.address, userDgxBalanceBefore, '', { from: addressOf.testUser2 });
-      const minTransferAmount = bN(initialMinimumPurchase);
-
-      // dummy transactions for a month
-      for (const d of indexRange(0, 2)) {
-        await daysCorrection(1, wrapperDgxContract.address);
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-      }
-
-      // kycUsers[0] withdraws
-      const dgxEquivalent = await wrapperDgxContract.dgxEquivalent.call({ from: addressOf.testUser2 });
-      await wrapperDgxContract.withdraw(dgxEquivalent, { from: addressOf.testUser2 });
-      const userDgxBalanceAfter = await contracts.dgx.balanceOf.call(addressOf.testUser2);
-
-      // simply holding 1 DGX for 1 month would have cost demurrage of
-      const demurrageForOneMonth = calculateFees(userDgxBalanceBefore.times(bN(2)), 'demurrage');
-      console.log('holding demurrage : ', demurrageForOneMonth.toNumber());
-      console.log('holding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
+      console.log('\tis        : ', totalLdgxOutActual.toNumber());
+      console.log('\terror for 6 months : ', ((totalLdgxMintedExpected - totalLdgxOutActual.toNumber()) * 100.0) / totalLdgxMintedExpected, ' %');
     });
     it('[convert to ldgx when dgx:ldgx != 1, and back to dgx]', async function () {
       const minTransferAmount = bN(initialMinimumPurchase);
@@ -393,10 +320,11 @@ contract('Lite DGX', function (accounts) {
 
       // simply holding 1 DGX for 1 month would have cost demurrage of
       const demurrageForOneMonth = calculateFees(userDgxBalanceBefore.times(bN(2)), 'demurrage');
-      console.log('holding demurrage : ', demurrageForOneMonth.toNumber());
-      console.log('holding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
+      console.log('\tholding demurrage : ', demurrageForOneMonth.toNumber());
+      console.log('\tholding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
     });
-    it('[sending back and forth between another account versus wrapper contract]', async function () {
+
+    it('[Sending back and forth between another account versus wrapper contract]', async function () {
       // the Wrapper should just behave as another Address from the point of view of DGX
       // everybody pays transfer fees
       await contracts.dgx.updateUserFeesConfigs(addressOf.testUser2, false, false, { from: addressOf.feesadmin });
@@ -418,11 +346,99 @@ contract('Lite DGX', function (accounts) {
       const diff2 = balance2.minus(balance3);
 
       // difference should be the same
-      console.log('diff1 : ', diff1.toNumber());
-      console.log('diff2 : ', diff2.toNumber());
+      console.log('\tdiff1 : ', diff1.toNumber());
+      console.log('\tdiff2 : ', diff2.toNumber());
       assert.deepEqual(diff1, diff2);
     });
-    it('[how does holding DGX differ from holding LDGX in terms of demurrage paid (1 month | 10 tx per day), turning off transfer fees for LDGX contract]', async function () {
+
+    it('[Sending DGX to another account and back after 30days VS depositing and withdrawing DGX from wrapper contract] Demurrage deducted should be the same', async function () {
+      // the Wrapper should just behave as another Address from the point of view of DGX
+      // everybody pays transfer fees
+      await contracts.dgx.updateUserFeesConfigs(addressOf.testUser2, false, false, { from: addressOf.feesadmin });
+      await contracts.dgx.updateUserFeesConfigs(addressOf.testUser1, false, false, { from: addressOf.feesadmin });
+      await contracts.dgx.updateUserFeesConfigs(wrapperDgxContract.address, false, false, { from: addressOf.feesadmin });
+      // send to ldgx contract and withdraw
+      const balance1 = await contracts.dgx.balanceOf.call(addressOf.testUser2);
+      const fixedAmount = randomBigNumber(bN, balance1);
+      await contracts.dgx.transferAndCall(wrapperDgxContract.address, fixedAmount, '', { from: addressOf.testUser2 });
+
+      const minTransferAmount = bN(initialMinimumPurchase);
+      // dummy transactions for a month
+      for (const d of indexRange(0, 30)) {
+        await daysCorrection(1, wrapperDgxContract.address);
+        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
+      }
+
+      await wrapperDgxContract.withdraw(await wrapperDgxContract.dgxEquivalent.call({ from: addressOf.testUser2 }), { from: addressOf.testUser2 });
+      const balance2 = await contracts.dgx.balanceOf.call(addressOf.testUser2);
+      const diff1 = balance1.minus(balance2);
+
+      // send to account and get back
+      const newAccount = accounts[7];
+      await contracts.dgx.transfer(newAccount, fixedAmount, { from: addressOf.testUser2 });
+      const transferFees = calculateFees(fixedAmount, 'transfer');
+      await daysCorrection(30, newAccount);
+      await contracts.dgx.transfer(addressOf.testUser2, await contracts.dgx.balanceOf.call(newAccount), { from: newAccount });
+      const balance3 = await contracts.dgx.balanceOf.call(addressOf.testUser2);
+      const diff2 = balance2.minus(balance3);
+
+      // difference should be the same
+      console.log('\tDemurrage + transfer fees [depositing/withdrawing from wrapper contract] : ', diff1.toNumber());
+      console.log('\tDemurrage + transfer fees [sending/receiving to another account] :         ', diff2.toNumber());
+      const percentageDiff = (diff2.toNumber() * 1.0 / diff1.toNumber()) * 100 - 100;
+      console.log('\t\t% diff (due to compound vs non-compound calculations) = ', percentageDiff);
+      assert.deepEqual(percentageDiff < 0.005, true);
+    });
+
+    it('[Sending DGX to another account, deduct his demurrage everyday, and transfer back after 30days VS depositing and withdrawing DGX from wrapper contract] Demurrage deducted should be the same', async function () {
+      // the Wrapper should just behave as another Address from the point of view of DGX
+      // everybody pays transfer fees
+      await contracts.dgx.updateUserFeesConfigs(addressOf.testUser3, false, false, { from: addressOf.feesadmin });
+      await contracts.dgx.updateUserFeesConfigs(addressOf.testUser2, false, false, { from: addressOf.feesadmin });
+      await contracts.dgx.updateUserFeesConfigs(addressOf.testUser1, false, false, { from: addressOf.feesadmin });
+      await contracts.dgx.updateUserFeesConfigs(wrapperDgxContract.address, false, false, { from: addressOf.feesadmin });
+      // send to ldgx contract and withdraw
+      const initialBalanceUser1 = await contracts.dgx.balanceOf.call(addressOf.testUser1);
+      const initialBalanceUser2 = await contracts.dgx.balanceOf.call(addressOf.testUser2);
+
+      // const fixedAmount = randomBigNumber(bN, Math.min(initialBalanceUser1, initialBalanceUser2));
+      const fixedAmount = bN(100e9);
+      await contracts.dgx.transferAndCall(wrapperDgxContract.address, fixedAmount, '', { from: addressOf.testUser1 });
+      // send to new account
+      const newAccount = accounts[8];
+      await contracts.dgx.transfer(newAccount, fixedAmount, { from: addressOf.testUser2 });
+
+      const dummyDepositAmount = bN(100e9);
+      // dummy transactions for a month
+
+      for (const d of indexRange(0, 30)) {
+        await daysCorrection(1, wrapperDgxContract.address);
+        await daysCorrection(1, newAccount);
+        await contracts.dgx.transferAndCall(wrapperDgxContract.address, dummyDepositAmount, '', { from: addressOf.testUser3 });
+        await contracts.dgxStorage.deduct_demurrage(newAccount);
+      }
+
+      const dgxEquivalent = await wrapperDgxContract.dgxEquivalent.call({ from: addressOf.testUser1 });
+      console.log(dgxEquivalent);
+      await wrapperDgxContract.withdraw(dgxEquivalent, { from: addressOf.testUser1 });
+      const finalBalanceUser1 = await contracts.dgx.balanceOf.call(addressOf.testUser1);
+
+      const totalFeesUser1 = initialBalanceUser1.minus(finalBalanceUser1);
+
+      await contracts.dgx.transfer(addressOf.testUser2, await contracts.dgx.balanceOf.call(newAccount), { from: newAccount });
+      const finalBalanceUser2 = await contracts.dgx.balanceOf.call(addressOf.testUser2);
+      const totalFeesUser2 = initialBalanceUser2.minus(finalBalanceUser2);
+
+      // difference should be the same
+      console.log('\tDemurrage + transfer fees [depositing/withdrawing from wrapper contract] : ', totalFeesUser1.toNumber());
+      console.log('\tDemurrage + transfer fees [sending/receiving to another account] :         ', totalFeesUser2.toNumber());
+      const percentageDiff = (totalFeesUser1.toNumber() * 1.0 / totalFeesUser2.toNumber()) * 100 - 100;
+      console.log('\t\t% diff (due to rounding errors) = ', percentageDiff);
+      assert.deepEqual(percentageDiff < 0.0001, true);
+    });
+
+
+    it('[how does holding DGX differ from holding LDGX in terms of demurrage paid (1 month | 1 tx per day), turning off transfer fees for LDGX contract]', async function () {
       // addressOf.testUser2 converts DGX to LDGX
       // after d days what would have been the demurrage paid in DGX
       // after d days what is user getting back by withdrawing from LDGX
@@ -437,15 +453,6 @@ contract('Lite DGX', function (accounts) {
       for (const d of indexRange(0, 30)) {
         await daysCorrection(1, wrapperDgxContract.address);
         await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
-        await contracts.dgx.transferAndCall(wrapperDgxContract.address, minTransferAmount, '', { from: addressOf.testUser1 });
       }
 
       // kycUsers[0] withdraws
@@ -456,9 +463,10 @@ contract('Lite DGX', function (accounts) {
       // simply holding 1 DGX for 1 month would have cost demurrage of
       const demurrageForOneMonth = calculateFees(bN(1e9).times(bN(30)), 'demurrage');
       const demurrageCompound = 1e9 - (1e9 * ((1 - (feesConfigs.demurrageRate / feesConfigs.demurrageBase)) ** 30));
-      console.log('holding demurrage (simple) : ', demurrageForOneMonth.toNumber());
-      console.log('holding demurrage (compound) : ', demurrageCompound);
-      console.log('holding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
+      console.log('\tholding demurrage (simple) : ', demurrageForOneMonth.toNumber());
+      console.log('\tholding demurrage (compound) : ', demurrageCompound);
+      console.log('\tholding LDGX paid : ', userDgxBalanceBefore.minus(userDgxBalanceAfter).toNumber());
     });
+
   });
 });

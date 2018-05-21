@@ -55,7 +55,7 @@ module.exports = {
     },
     development: {
       host: 'localhost',
-      port: 8545,
+      port: 6545,
       network_id: '*',
       gas: 8000000,
     },
@@ -65,11 +65,4 @@ module.exports = {
       enabled: false,
     },
   },
-  mocha: process.env.REPORT_GAS ? {
-    reporter: 'eth-gas-reporter',
-    reporterOptions: {
-      currency: 'USD',
-      gasPrice: 21,
-    },
-  } : {},
 };

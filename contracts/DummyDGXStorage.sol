@@ -6,7 +6,7 @@ import "./TokenReceiver.sol";
 import "./libs/DemurrageStructs.sol";
 import "./libs/TransferStructs.sol";
 
-contract DGXStorage {
+contract DummyDGXStorage {
   using Types for Types.MutableUint;
   using Types for Types.MutableTimestamp;
 
@@ -82,11 +82,11 @@ contract DGXStorage {
     ROOT = msg.sender;
   }
 
-  function setInteractive(address _dgxInteractive)
+  function setInteractive(address _DummyDGXInteractive)
     public
     if_root()
   {
-    DGX_INTERACTIVE_ADDRESS = _dgxInteractive;
+    DGX_INTERACTIVE_ADDRESS = _DummyDGXInteractive;
   }
 
   modifier if_root() {
@@ -312,7 +312,7 @@ contract DGXStorage {
     _success = true;
   }
 
-  // This function is not present in the DGX2.0 token contracts.
+  // This function is not present in the DummyDGX2.0 token contracts.
   // For test purpose, only used to bypass the POP process
   function mint_dgx_for(
     address _for,
@@ -327,7 +327,7 @@ contract DGXStorage {
     _success = true;
   }
 
-  // This function is not present in the DGX2.0 token contracts.
+  // This function is not present in the DummyDGX2.0 token contracts.
   // For test purpose, only used to simulate demurrage deduction
   function modify_last_payment_date(
     address _of,
@@ -390,7 +390,7 @@ contract DGXStorage {
   }
 
   function deduct_demurrage(address _user)
-    private
+    public
     returns (bool _success)
   {
     DemurrageStructs.Demurrage memory _demurrage = get_demurraged_data(_user);

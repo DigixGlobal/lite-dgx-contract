@@ -1,20 +1,20 @@
 pragma solidity ^0.4.23;
 
-import "./DGXStorage.sol";
+import "./DummyDGXStorage.sol";
 
-contract DGX {
+contract DummyDGX {
 
   address DGX_STORAGE_ADDRESS;
   address FEES_ADMIN;
 
-  string public constant name = "Digix Gold Token";
-  string public constant symbol = "DGX";
+  string public constant name = "Dummy Digix Gold Token";
+  string public constant symbol = "DummyDGX";
   uint8 public constant decimals = 9;
 
-  constructor(address _dgxStorage, address _feesAdmin)
+  constructor(address _dummyDGXStorage, address _feesAdmin)
     public
   {
-    DGX_STORAGE_ADDRESS = _dgxStorage;
+    DGX_STORAGE_ADDRESS = _dummyDGXStorage;
     FEES_ADMIN = _feesAdmin;
   }
 
@@ -28,7 +28,7 @@ contract DGX {
     constant
     returns (uint256 _totalSupply)
   {
-    _totalSupply = DGXStorage(DGX_STORAGE_ADDRESS).read_total_supply();
+    _totalSupply = DummyDGXStorage(DGX_STORAGE_ADDRESS).read_total_supply();
   }
 
   function balanceOf(address _owner)
@@ -36,14 +36,14 @@ contract DGX {
     constant
     returns (uint256 _balance)
   {
-    _balance = DGXStorage(DGX_STORAGE_ADDRESS).show_demurraged_balance(_owner);
+    _balance = DummyDGXStorage(DGX_STORAGE_ADDRESS).show_demurraged_balance(_owner);
   }
 
   function transfer(address _to, uint256 _value)
     public
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).put_transfer(msg.sender, _to, 0x0, _value, false);
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).put_transfer(msg.sender, _to, 0x0, _value, false);
   }
 
   function transferFrom(
@@ -54,7 +54,7 @@ contract DGX {
     public
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).put_transfer(_from, _to, msg.sender, _value, true);
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).put_transfer(_from, _to, msg.sender, _value, true);
   }
 
   function transferAndCall(
@@ -74,7 +74,7 @@ contract DGX {
     public
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).put_approve(msg.sender, _spender, _value);
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).put_approve(msg.sender, _spender, _value);
   }
 
   function allowance(address _owner, address _spender)
@@ -82,7 +82,7 @@ contract DGX {
     constant
     returns (uint256 _allowance)
   {
-    _allowance = DGXStorage(DGX_STORAGE_ADDRESS).read_allowance(_owner, _spender);
+    _allowance = DummyDGXStorage(DGX_STORAGE_ADDRESS).read_allowance(_owner, _spender);
   }
 
   function updateUserFeesConfigs(
@@ -94,7 +94,7 @@ contract DGX {
     if_fees_admin()
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).update_user_fees_configs(
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).update_user_fees_configs(
       _user,
       _no_demurrage_fee,
       _no_transfer_fee
@@ -109,7 +109,7 @@ contract DGX {
     public
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).mint_dgx_for(_for, _amount);
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).mint_dgx_for(_for, _amount);
   }
 
   // This function is not present in the DGX2.0 token contracts.
@@ -118,6 +118,6 @@ contract DGX {
     public
     returns (bool _success)
   {
-    _success = DGXStorage(DGX_STORAGE_ADDRESS).modify_last_payment_date(_of, _byMinutes);
+    _success = DummyDGXStorage(DGX_STORAGE_ADDRESS).modify_last_payment_date(_of, _byMinutes);
   }
 }

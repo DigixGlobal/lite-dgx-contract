@@ -1,8 +1,8 @@
 const MathUtils = artifacts.require('./MathUtils.sol');
 const Types = artifacts.require('./Types.sol');
 
-const DGXStorage = artifacts.require('./DGXStorage.sol');
-const DGX = artifacts.require('./DGX.sol');
+const DGXStorage = artifacts.require('./DummyDGXStorage.sol');
+const DGX = artifacts.require('./DummyDGX.sol');
 const LDGX = artifacts.require('./LDGX.sol');
 
 const deployLibraries = async function () {
@@ -25,15 +25,17 @@ const deployTestData = async function (libs, addressOf, contracts) {
 };
 
 const mintSomeTokens = async function (contracts, addressOf, bN) {
-  await contracts.dgx.mintDgxFor(addressOf.testUser1, bN(1000 * (10 ** 9)));
-  await contracts.dgx.mintDgxFor(addressOf.testUser2, bN(1000 * (10 ** 9)));
+  await contracts.dgx.mintDgxFor(addressOf.testUser1, bN(100000 * (10 ** 9)));
+  await contracts.dgx.mintDgxFor(addressOf.testUser2, bN(100000 * (10 ** 9)));
+  await contracts.dgx.mintDgxFor(addressOf.testUser3, bN(100000 * (10 ** 9)));
 };
 
 const getUserAccounts = function (accounts) {
   const addressOf = {
     feesadmin: accounts[1],
     testUser1: accounts[2],
-    testUser2: accounts[3]
+    testUser2: accounts[3],
+    testUser3: accounts[4]
   };
   return addressOf;
 };
