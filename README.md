@@ -6,3 +6,17 @@ Wrapper contract for Digix Gold Token (DGX)
 * No transfer fees
 * Standard behaviour as ERC-20 token
 * Demurrage to be deducted on the backing DGX tokens
+
+### Test
+* Install the dependencies
+  ```
+  npm install
+  ```
+* Compile the contracts
+  ```
+  truffle compile
+  ```
+* Run tests
+  ```
+  truffle test test/WDGX.js
+  ```
