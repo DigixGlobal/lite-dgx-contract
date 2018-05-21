@@ -60,7 +60,7 @@ contract DGXStorage {
   address ROOT;
   address DGX_INTERACTIVE_ADDRESS;
 
-  function DGXStorage()
+  constructor()
     public
   {
     address _demurrage_collector;

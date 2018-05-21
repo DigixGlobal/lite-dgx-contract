@@ -3,7 +3,7 @@ const Types = artifacts.require('./Types.sol');
 
 const DGXStorage = artifacts.require('./DGXStorage.sol');
 const DGX = artifacts.require('./DGX.sol');
-const WDGX = artifacts.require('./WDGX.sol');
+const LDGX = artifacts.require('./LDGX.sol');
 
 const deployLibraries = async function () {
   const libs = {};
@@ -23,9 +23,9 @@ const deployTestData = async function (libs, addressOf, contracts) {
   // console.log('setting interactive address in storage');
   await contracts.dgxStorage.setInteractive(contracts.dgx.address);
   // console.log('deploying wrapperDgx');
-  contracts.wrapperDgxToken = await WDGX.new(
+  contracts.liteDgx = await LDGX.new(
     contracts.dgx.address,
-    contracts.dgx.address
+    contracts.dgxStorage.address
   );
 };
 

@@ -10,7 +10,7 @@ contract DGX {
   string public constant symbol = "DGX";
   uint8 public constant decimals = 9;
 
-  function DGX(address _dgxStorage)
+  constructor(address _dgxStorage)
     public
   {
     DGX_STORAGE_ADDRESS = _dgxStorage;
