@@ -1,7 +1,7 @@
 {
-  "name": "DummyDGX-wrapper-contract",
-  "version": "1.0.0",
-  "description": "Wrapper contract for Digix Gold Token (DummyDGX)",
+  "name": "@digix/lite-dgx-contract",
+  "version": "1.0.1",
+  "description": "Wrapper contract for Digix Gold Token (DGX)",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DigixGlobal/DummyDGX-wrapper-contract.git"
+    "url": "git+https://github.com/DigixGlobal/lite-dgx-contract.git"
   },
   "dependencies": {
     "openzeppelin-solidity": "1.8.0",
@@ -24,7 +24,7 @@
   "author": "DigixGlobal",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/DigixGlobal/DummyDGX-wrapper-contract/issues"
+    "url": "https://github.com/DigixGlobal/lite-dgx-contract/issues"
   },
-  "homepage": "https://github.com/DigixGlobal/DummyDGX-wrapper-contract#readme"
+  "homepage": "https://github.com/DigixGlobal/lite-dgx-contract#readme"
 }

@@ -101,6 +101,19 @@ contract DummyDGX {
     );
   }
 
+  function showDemurrageConfigs()
+    public
+    constant
+    returns (
+      uint256 _base,
+      uint256 _rate,
+      address _collector,
+      bool _no_demurrage_fee
+    )
+  {
+    (_base, _rate, _collector, _no_demurrage_fee) = DummyDGXStorage(DGX_STORAGE_ADDRESS).read_demurrage_config_underlying();
+  }
+
   ////////////////////////////// MOCK FUNCTIONS ///////////////////////////////
 
   // This function is not present in the DGX2.0 token contracts.

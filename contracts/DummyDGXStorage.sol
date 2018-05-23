@@ -123,6 +123,22 @@ contract DummyDGXStorage {
     }
   }
 
+  function read_demurrage_config_underlying()
+    public
+    constant
+    returns (
+      uint256 _base,
+      uint256 _rate,
+      address _collector,
+      bool _no_demurrage_fee
+    )
+  {
+    _base = system.config.fees.demurrage.base;
+    _rate = system.config.fees.demurrage.rate;
+    _collector = system.collectors.demurrage;
+    _no_demurrage_fee = system.config.no_demurrage_fee;
+  }
+
   function read_transfer_config()
     public
     constant
