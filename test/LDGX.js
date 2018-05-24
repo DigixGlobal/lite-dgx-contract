@@ -1,6 +1,8 @@
 const a = require('awaiting');
 
 const LDGX = artifacts.require('./LDGX.sol');
+const MockValidContract = artifacts.require('./MockContractWithFallback.sol');
+const MockInvalidContract = artifacts.require('./MockContractWithoutFallback.sol');
 
 const {
   deployLibraries,
@@ -215,6 +217,56 @@ contract('Lite DGX', function (accounts) {
       // assertions
       assert.deepEqual(wrapperDgxBalanceNow, expectedDemurragedBalance.plus(depositAmount).minus(expectedTransferFees));
       assert.deepEqual(ldgxTotalSupplyNow, ldgxTotalSupplyAfterShouldBe);
+    });
+  });
+
+  describe('EIP223 transfer', function () {
+    let ldgxBalance;
+    let validContract;
+    let invalidContract;
+    before(async function () {
+      // deposit some DGX to get LDGX
+      await contracts.dgx.transferAndCall(contracts.liteDgx.address, bN(1e9), '', { from: addressOf.testUser1 });
+      ldgxBalance = await contracts.liteDgx.balanceOf.call(addressOf.testUser1);
+      // deploy necessary mock contracts
+      validContract = await MockValidContract.new();
+      invalidContract = await MockInvalidContract.new();
+    });
+    it('[can transfer to valid contract]', async function () {
+      const initialBalance = await contracts.liteDgx.balanceOf.call(addressOf.testUser1);
+      const transferAmount = bN(200);
+      assert.ok(await contracts.liteDgx.transfer.call(
+        validContract.address,
+        transferAmount,
+        '',
+        { from: addressOf.testUser1 },
+      ));
+      await contracts.liteDgx.transfer(validContract.address, transferAmount, '', { from: addressOf.testUser1 });
+      assert.deepEqual(await contracts.liteDgx.balanceOf.call(validContract.address), transferAmount);
+      assert.deepEqual(await contracts.liteDgx.balanceOf.call(addressOf.testUser1), initialBalance.minus(transferAmount));
+    });
+    it('[can transfer to any account address]', async function () {
+      const initialBalance = await contracts.liteDgx.balanceOf.call(addressOf.testUser1);
+      const transferAmount = bN(200);
+      const recipient = randomAddress();
+      assert.ok(await contracts.liteDgx.transfer.call(
+        recipient,
+        transferAmount,
+        '',
+        { from: addressOf.testUser1 },
+      ));
+      await contracts.liteDgx.transfer(recipient, transferAmount, '', { from: addressOf.testUser1 });
+      assert.deepEqual(await contracts.liteDgx.balanceOf.call(recipient), transferAmount);
+      assert.deepEqual(await contracts.liteDgx.balanceOf.call(addressOf.testUser1), initialBalance.minus(transferAmount));
+    });
+    it('[cannot transfer to contract without tokenFallback]: revert', async function () {
+      const transferAmount = bN(200);
+      assert(await a.failure(contracts.liteDgx.transfer.call(
+        invalidContract.address,
+        transferAmount,
+        '',
+        { from: addressOf.testUser1 },
+      )));
     });
   });
 
