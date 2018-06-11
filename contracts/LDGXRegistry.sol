@@ -21,6 +21,11 @@ contract LDGXRegistry {
     address ldgxInstance;
   }
 
+  modifier if_exchange_owner(_exchange_id) {
+    require(exchanges[_exchange_id]).owner == msg.sender;
+    _;
+  }
+
   uint256 totalExchanges;
   mapping(uint256 => Exchange) exchanges;
 
@@ -42,8 +47,7 @@ contract LDGXRegistry {
   }
 
   // Creates a new deposit address for an exchange 
-  function createUser(uint256 _exchange_id) public returns (address _new_deposit_address) {
-    require(exchanges[_exchange_id].owner == msg.sender); 
+  function createUser(uint256 _exchange_id) if_exchange_owner(_exchange_id) public returns (address _new_deposit_address) {
     uint256 _total_users = exchange[_exchange_id].totalUsers + 1;
     assembly {
       _new_deposit_address := create(0,0,0)
@@ -52,11 +56,19 @@ contract LDGXRegistry {
   }
 
   // Sweep DGX balances from deposit address associated with an exchange and moves it into exchange
-  function sweepBalance(uint256 _exchange_id, uint256 _user_id, address _lite_dgx_target) public returns (bool _success) {
+
+  // Exchange pays gas for sweep
+  function sweepBalance(uint256 _exchange_id, uint256 _user_id, address _lite_dgx_target) if_exchange_owner(_exchange_id) public returns (bool _success) {
   }
 
+  // Digix pays gas for sweep will require some change to the logic
+  // function sweepBalanceAsDigix(uint256 _exchange_id, uint256 _user_id, address _lite_dgx_target) public returns (bool _success) 
+    
+
   // Withdraw DGX from LiteDGX and send to recipient
-  function withdraw(uint256 _exchange_id, uint256 _user_id, address _recipient) public returns (bool _success) {
+
+  // Exchanges pays gas for withdrawal
+  function withdraw(uint256 _exchange_id, uint256 _user_id, address _recipient) if_exhcange_owner(_exchange_id) public returns (bool _success) {
   }
 
   // Implement per-exchange bulkSweep function here
