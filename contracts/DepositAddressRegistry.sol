@@ -1,5 +1,17 @@
 pragma solidity ^0.4.23;
 
+import './DepositAddress.sol';
+
+contract DepositAddressRegistry { 
+
+  constructor(address _dgxTokenAddress, address _dgxTokenStorage) public {
+    DGX_TOKEN_ADDRESS = _dgxTokenAddress;
+    DGX_TOKEN_STORAGE = _dgxTokenStorage;
+    ROOT = msg.sender;
+  }
+
+}
+/*
 import './LDGX.sol';
 
 contract LDGXRegistry {
@@ -21,8 +33,8 @@ contract LDGXRegistry {
     address ldgxInstance;
   }
 
-  modifier if_exchange_owner(_exchange_id) {
-    require(exchanges[_exchange_id]).owner == msg.sender;
+  modifier if_exchange_owner(uint256 _exchange_id) {
+    require(exchanges[_exchange_id].owner == msg.sender);
     _;
   }
 
@@ -39,20 +51,19 @@ contract LDGXRegistry {
   function createExchange(address _exchange_wallet) public returns (uint256 _id) {
     address _ldgxInstance;
     _id = totalExchanges + 1;
-    Exchange exchange;
-    exchange[_id].owner = msg.sender;
-    exchange[_id].exchangeWallet = _exchange_wallet;
-    exchange[_id].totalUsers = 0;
-    exchange[_id].ldgxInstance = new LDGX;
+    exchanges[_id].owner = msg.sender;
+    exchanges[_id].exchangeWallet = _exchange_wallet;
+    exchanges[_id].totalUsers = 0;
+    exchanges[_id].ldgxInstance = new LDGX(DGX_TOKEN_ADDRESS, DGX_TOKEN_STORAGE);
   }
 
   // Creates a new deposit address for an exchange 
   function createUser(uint256 _exchange_id) if_exchange_owner(_exchange_id) public returns (address _new_deposit_address) {
-    uint256 _total_users = exchange[_exchange_id].totalUsers + 1;
+    uint256 _total_users = exchanges[_exchange_id].totalUsers + 1;
     assembly {
       _new_deposit_address := create(0,0,0)
     }
-    exchange[_exchange_id].users[_total_users].depositAddress = _new_deposit_address;
+    exchanges[_exchange_id].users[_total_users].depositAddress = _new_deposit_address;
   }
 
   // Sweep DGX balances from deposit address associated with an exchange and moves it into exchange
@@ -68,10 +79,11 @@ contract LDGXRegistry {
   // Withdraw DGX from LiteDGX and send to recipient
 
   // Exchanges pays gas for withdrawal
-  function withdraw(uint256 _exchange_id, uint256 _user_id, address _recipient) if_exhcange_owner(_exchange_id) public returns (bool _success) {
+  function withdraw(uint256 _exchange_id, uint256 _user_id, address _recipient) if_exchange_owner(_exchange_id) public returns (bool _success) {
   }
 
   // Implement per-exchange bulkSweep function here
   // Implement per-exchange bulkWithdraw function
 
 }
+*/
