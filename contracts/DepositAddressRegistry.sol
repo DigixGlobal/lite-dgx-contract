@@ -2,7 +2,11 @@ pragma solidity ^0.4.23;
 
 import './DepositAddress.sol';
 
-contract DepositAddressRegistry { 
+contract DepositAddressRegistry {
+
+  address public DGX_TOKEN_ADDRESS;
+  address public DGX_TOKEN_STORAGE;
+  address public ROOT;
 
   constructor(address _dgxTokenAddress, address _dgxTokenStorage) public {
     DGX_TOKEN_ADDRESS = _dgxTokenAddress;
@@ -25,7 +29,7 @@ contract LDGXRegistry {
     address liteDGXWallet;
   }
 
-  struct Exchange { 
+  struct Exchange {
     address owner;
     address exchangeWallet;
     uint256 totalUsers;
@@ -57,7 +61,7 @@ contract LDGXRegistry {
     exchanges[_id].ldgxInstance = new LDGX(DGX_TOKEN_ADDRESS, DGX_TOKEN_STORAGE);
   }
 
-  // Creates a new deposit address for an exchange 
+  // Creates a new deposit address for an exchange
   function createUser(uint256 _exchange_id) if_exchange_owner(_exchange_id) public returns (address _new_deposit_address) {
     uint256 _total_users = exchanges[_exchange_id].totalUsers + 1;
     assembly {
@@ -73,8 +77,8 @@ contract LDGXRegistry {
   }
 
   // Digix pays gas for sweep will require some change to the logic
-  // function sweepBalanceAsDigix(uint256 _exchange_id, uint256 _user_id, address _lite_dgx_target) public returns (bool _success) 
-    
+  // function sweepBalanceAsDigix(uint256 _exchange_id, uint256 _user_id, address _lite_dgx_target) public returns (bool _success)
+
 
   // Withdraw DGX from LiteDGX and send to recipient
 
