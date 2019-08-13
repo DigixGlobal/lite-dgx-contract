@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle test test/LDGX.js"
+    "test": "bash scripts/unit-test.sh"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,9 @@
     "@digix/helpers": "^1.0.0",
     "awaiting": "^3.0.0",
     "ethereumjs-testrpc": "^3.9.2",
-    "solc": "^0.4.16"
+    "ganache-cli": "6.1.0",
+    "solc": "^0.4.16",
+    "truffle": "4.1.14"
   },
   "author": "DigixGlobal",
   "license": "ISC",

@@ -12,12 +12,13 @@ Wrapper contract for Digix Gold Token (DGX)
 ### Test
 * Install the dependencies
   ```
+  rm package-lock.json
   npm install
-  npm i -g truffle
   ```
 * Compile the contracts
   ```
-  truffle compile
+  rm -rf build/
+  ./node_modules/.bin/truffle compile
   ```
 * Run tests
   ```
