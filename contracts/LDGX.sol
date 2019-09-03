@@ -23,6 +23,8 @@ contract LDGX is StandardToken {
   address public DGX_TOKEN_STORAGE;
   bool public initialized;
 
+  event Transfer(address indexed from, address indexed to, uint256 value, bytes32 indexed data);
+
   constructor(address _dgxTokenAddress, address _dgxTokenStorage) public {
     totalSupply_ = 0;
     DGX_TOKEN_ADDRESS = _dgxTokenAddress;
@@ -36,6 +38,18 @@ contract LDGX is StandardToken {
     transfer(_receiver, _amount);
     success = TokenReceiver(_receiver).tokenFallback(msg.sender, _amount, _data);
     require(success);
+  }
+
+  // transfer function to support ERC-223 <https://github.com/ethereum/EIPs/issues/223>
+  function transfer(address _to, uint256 _value, bytes32 _data)
+    public
+    returns (bool _success)
+  {
+    if(isContract(_to)) {
+      _success = transferToContract(_to, _value, _data);
+    } else {
+      _success = transferToAddress(_to, _value, _data);
+    }
   }
 
   // first deposit to make sure there is already some DGX/LDGX
@@ -110,5 +124,42 @@ contract LDGX is StandardToken {
     returns (uint256 _dgxLdgx)
   {
     _dgxLdgx = totalSupply_.mul(10**9).div(ERC20(DGX_TOKEN_ADDRESS).balanceOf(address(this)));
+  }
+
+  ////////////////////////// PRIVATE FUNCTIONS ////////////////////////////////
+
+  function transferToContract(address _to, uint256 _value, bytes32 _data)
+    private
+    returns (bool _success)
+  {
+    require(balances[msg.sender] >= _value);
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    TokenReceiver(_to).tokenFallback(msg.sender, _value, _data);
+    emit Transfer(msg.sender, _to, _value, _data);
+    _success = true;
+  }
+
+  function transferToAddress(address _to, uint256 _value, bytes32 _data)
+    private
+    returns (bool _success)
+  {
+    require(balances[msg.sender] >= _value);
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    emit Transfer(msg.sender, _to, _value, _data);
+    _success = true;
+  }
+
+  function isContract(address _address)
+    private
+    constant
+    returns (bool)
+  {
+    uint length;
+    assembly {
+      length := extcodesize(_address)
+    }
+    return (length > 0);
   }
 }
